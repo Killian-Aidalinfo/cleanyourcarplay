@@ -1,0 +1,12 @@
+# Raw device dumps: they carry IP, SSID, serial, MAC, paired phone names,
+# Bluetooth history and often location. Never commit them.
+profiles/*/raw/
+*.bugreport.zip
+*.bugreport.txt
+shots/
+
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store
