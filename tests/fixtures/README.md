@@ -19,15 +19,24 @@ shapes; read the file yourself before committing it.
 
 ## Status
 
-Tests are deferred until there is hardware to capture from. There is no test
-code here yet, and pretending otherwise would be exactly the dishonesty this
-repo exists to avoid.
+There are no fixtures here yet: no box has been probed. Fixture-based tests
+are deferred until there is hardware to capture from.
 
-When hardware arrives, the first tests to write are the ones that cost the most
-if wrong:
+Three of the five tests below already run, against a live Android rather than
+a recording — see `tests/emu/`. That rig is not a substitute for fixtures: it
+has no vendor packages and no mirroring stack, so it cannot test the
+classification rules that matter most on a real box.
+
+The first tests to write, the ones that cost the most if wrong:
 
 1. A Linux dongle is detected and refused, not probed into a traceback.
+   *Needs a fixture — the rig always answers ADB.*
 2. A missing diagnostic source drops its line instead of raising.
+   **Covered by `tests/emu/cycle.sh`:** pstore and thermal are absent there.
 3. A NEVER package is refused, and no flag makes it through.
+   **Covered by `tests/emu/cycle.sh`.**
 4. An unknown package classifies as RISKY, never SAFE.
+   **Covered by `tests/emu/cycle.sh`:** 175 of 239 emulator packages land
+   RISKY, every one of them unknown to the SAFE list.
 5. A journal written before a mid-batch reboot still restores afterwards.
+   *Needs a fixture or a rig step that reboots mid-batch — neither exists.*

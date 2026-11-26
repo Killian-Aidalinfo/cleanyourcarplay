@@ -89,6 +89,7 @@ cases; read what you are about to commit anyway. Raw dumps live under
 | `tools/apply.py` | disable, restore, survival check |
 | `tools/check.py` | drift against the recorded profile |
 | `references/` | the human-readable rules and what evidence proves |
+| `tests/emu/` | a throwaway Android in a VM: the sacrificial device |
 | `profiles/<brand>-<model>/` | what a real device reported |
 | `recovery/<brand>-<model>.md` | how to get that model back |
 
@@ -101,6 +102,10 @@ cases; read what you are about to commit anyway. Raw dumps live under
   is known, a `recovery/` page.
 - A new evidence source goes in `tools/diag.py` **and** gets a paragraph in
   `references/diag.md` saying what it proves and what it does not.
+- A change to `tools/` runs against the emulator rig before it is committed:
+  `tests/emu/start.sh && tests/emu/cycle.sh`. A green cycle proves the code
+  runs against a real Android. It proves nothing about a box — see
+  `tests/emu/README.md` for where the line is.
 
 ## Hard rules for repo changes
 

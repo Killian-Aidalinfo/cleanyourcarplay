@@ -27,11 +27,23 @@ SAFE = "SAFE"
 
 # APEX-bundled on Android 13+. Disabling these gives a boot loop, a blinking
 # LED, no Wi-Fi and no ADB. Only documented exit: Qualcomm EDL.
+# AOSP spells these com.android.*; a build with Google Mobile Services —
+# which is most AI Boxes, they ship the Play Store — spells the very same
+# modules com.google.android.*. Verified on an arm64 Android 15 GMS image:
+# only the com.google.* names are present there. Both spellings belong here,
+# because the one that is missing costs nothing and the one that is missing
+# from the list costs the device.
 APEX_13 = {
     "com.android.adservices.api",
     "com.android.sdksandbox",
     "com.android.federatedcompute.services",
     "com.android.ondevicepersonalization.services",
+    "com.google.android.adservices.api",
+    "com.google.android.sdksandbox",
+    "com.google.android.federatedcompute",
+    "com.google.android.federatedcompute.services",
+    "com.google.android.ondevicepersonalization.services",
+    "com.google.mainline.adservices",
 }
 
 # The mirroring stack as documented on the Carlinkit TBox Ultra 2. Vendor names
@@ -261,6 +273,11 @@ class Classifier:
         if package in APEX_13:
             if self.sdk >= 33:
                 return NEVER, "APEX-bundled on Android 13+ — boot loop, no Wi-Fi, no ADB, EDL to recover"
+            if self.sdk <= 0:
+                # No probe, no SDK. Reading that as "older than 13" would turn
+                # the worst outcome in this repo into a question the user can
+                # answer yes to. Unknown is treated as 13+.
+                return NEVER, "APEX-bundled, and this device's Android version is unknown — treated as 13+ (boot loop, no Wi-Fi, no ADB, EDL to recover)"
             return RISKY, "APEX on newer Android; this device reports SDK %d" % self.sdk
         if self._is_survival(package):
             return NEVER, "keeps the device alive and reachable"

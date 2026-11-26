@@ -35,6 +35,12 @@ only ever list boxes that were genuinely tested.
 Most repos in this space claim broad support on the strength of one device. This
 one will tell you precisely what it has seen.
 
+It *has* been run end to end against a real Android — a throwaway emulator in
+a VM, see `tests/emu/`. That proves the code works against a live `adbd`, `pm`
+and `settings`, and it found five bugs that no amount of reading would have.
+It proves nothing about a CarPlay box: an emulator has no mirroring stack, no
+vendor firmware and no car.
+
 ## How you use it
 
 You do not read this README to use the toolkit, and you do not type its

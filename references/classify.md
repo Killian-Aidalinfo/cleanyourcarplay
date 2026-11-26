@@ -61,12 +61,32 @@ on that device, whatever it is called.
 
 ### APEX on Android 13+
 
-- `com.android.adservices.api`
-- `com.android.sdksandbox`
-- `com.android.federatedcompute.services`
-- `com.android.ondevicepersonalization.services`
+AOSP spells these `com.android.*`. A build with Google Mobile Services — which
+is most of these boxes, they ship the Play Store — spells the same modules
+`com.google.android.*`. Both spellings are on the list, because the name that
+is absent from a given device costs nothing and the name that is absent from
+this list costs the device.
 
-Boot loop, no Wi-Fi, no ADB, EDL to recover.
+- `com.android.adservices.api` / `com.google.android.adservices.api`
+- `com.android.sdksandbox` / `com.google.android.sdksandbox`
+- `com.android.federatedcompute.services` / `com.google.android.federatedcompute`
+- `com.android.ondevicepersonalization.services` / `com.google.android.ondevicepersonalization.services`
+- `com.google.mainline.adservices`
+
+Reported consequence: boot loop, no Wi-Fi, no ADB, EDL to recover.
+
+**What we have actually seen.** On the emulator rig — Android 15, GMS, arm64,
+`user` build — `pm disable-user --user 0` accepted all four, the device
+rebooted normally with Wi-Fi and ADB intact, and Android had re-enabled all
+four by the time it came back. So the bootloop did **not** reproduce there.
+That is one image on one Android version, and the reports come from Android 13
+vendor firmware, which is a different system. They stay NEVER: the list is not
+a prediction, it is a refusal to gamble a device with no screen and no reset
+button on a difference we cannot test.
+
+**When the Android version is unknown**, because no probe ran, these are
+treated as 13+ and refused. Reading an unknown SDK as "older than 13" would
+turn the worst outcome in this repo into a question a user can answer yes to.
 
 ### Keeping the device alive and reachable
 

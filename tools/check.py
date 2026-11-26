@@ -35,13 +35,17 @@ def check(box: Box, probe: dict) -> int:
                 print("CHANGED  %s: %s -> %s" % (key, before[key], probe[key]))
                 print("         The firmware moved. Expect the package list to have moved too.")
 
-    expected_disabled = {
-        entry["package"] for entry in read_journal(root) if entry.get("action") == "disable"
-    }
-    restored = {
-        entry["package"] for entry in read_journal(root) if entry.get("action") == "restore"
-    }
-    expected_disabled -= restored
+    # The journal is a log, not two sets. Subtracting every restore from every
+    # disable loses the order, so a package disabled, restored, then disabled
+    # again on a later batch disappears from the check entirely — and that
+    # sequence is exactly how this toolkit is meant to be used. Replay it:
+    # for each package, the last action is the one that counts.
+    state = {}
+    for entry in read_journal(root):
+        action = entry.get("action")
+        if action in ("disable", "restore"):
+            state[entry["package"]] = action
+    expected_disabled = {p for p, a in state.items() if a == "disable"}
 
     if not expected_disabled:
         print("No packages are recorded as disabled by this toolkit.")

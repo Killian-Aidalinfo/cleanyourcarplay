@@ -10,3 +10,6 @@ __pycache__/
 .venv/
 venv/
 .DS_Store
+
+# Profiles captured from the emulator rig, not from a device
+profiles/google-sdk-*/

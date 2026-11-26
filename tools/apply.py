@@ -64,7 +64,24 @@ def classifier_for(box: Box, probe: dict) -> Classifier:
     )
 
 
-def survival_check(box: Box, probe: dict) -> dict:
+def baseline_probe(probe: dict):
+    """The probe captured BEFORE anything was changed, or None.
+
+    Comparing the device to a probe taken right now cannot fail: whatever the
+    mirroring stack looks like at this instant becomes the expectation. The
+    only honest baseline is the one `profile.py` wrote before the first batch.
+    """
+    path = os.path.join(REPO, "profiles", slug(probe), "probe.json")
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path) as handle:
+            return json.load(handle)
+    except (ValueError, OSError):
+        return None
+
+
+def survival_check(box: Box, probe: dict, baseline: dict = None) -> dict:
     """Four greens or stop: accessibility bound, Wi-Fi up, ADB answering, screencap.
 
     Note the limit, stated here and in references/classify.md: this does NOT
@@ -77,7 +94,11 @@ def survival_check(box: Box, probe: dict) -> dict:
     except BoxError:
         checks["adb"] = False
 
+    # Union, not "baseline if present": a service bound since the profile was
+    # taken still has to survive, and one that was in the profile must not
+    # vanish. Either disappearing is the failure this check exists for.
     expected = set(probe.get("accessibility_services") or ())
+    expected |= set((baseline or {}).get("accessibility_services") or ())
     if expected:
         try:
             checks["accessibility"] = expected.issubset(set(box.accessibility_services()))
@@ -113,7 +134,8 @@ def survival_check(box: Box, probe: dict) -> dict:
     return checks
 
 
-def disable(box: Box, probe: dict, packages: list, assume_yes: bool = False) -> int:
+def disable(box: Box, probe: dict, packages: list, assume_yes: bool = False,
+            baseline: dict = None) -> int:
     root = profile_dir(probe)
     classifier = classifier_for(box, probe)
 
@@ -179,7 +201,7 @@ def disable(box: Box, probe: dict, packages: list, assume_yes: bool = False) -> 
         pass
     time.sleep(SYNC_WAIT_SECONDS)
 
-    checks = survival_check(box, probe)
+    checks = survival_check(box, probe, baseline)
     print("\nSurvival check: %s" % ("OK" if checks["ok"] else "PROBLEM"))
     for name in ("adb", "accessibility", "wifi", "screencap"):
         value = checks.get(name)
@@ -258,10 +280,28 @@ def main(argv=None) -> int:
             return 2
 
         if args.action == "check":
-            checks = survival_check(box, probe)
+            baseline = baseline_probe(probe)
+            if baseline is None:
+                print(
+                    "No profiles/%s/probe.json on this machine, so there is no\n"
+                    "record of what was bound before. A check against the device's\n"
+                    "own current state cannot fail and would be a false green.\n"
+                    "Run tools/profile.py on a healthy device first."
+                    % slug(probe),
+                    file=sys.stderr,
+                )
+                return 1
+            checks = survival_check(box, probe, baseline)
             for name in ("adb", "accessibility", "wifi", "screencap"):
                 value = checks.get(name)
                 print("%-14s %s" % (name, "n/a" if value is None else ("ok" if value else "FAILED")))
+            if checks.get("accessibility") is None:
+                print(
+                    "\naccessibility is n/a because nothing was bound when the "
+                    "profile was taken.\nThis check says nothing about touch on "
+                    "this device.",
+                    file=sys.stderr,
+                )
             return 0 if checks["ok"] else 1
 
         if args.action == "restore":
@@ -269,6 +309,17 @@ def main(argv=None) -> int:
 
         if not args.packages:
             parser.error("disable needs a package list file")
+        baseline = baseline_probe(probe)
+        if baseline is None:
+            print(
+                "No profiles/%s/probe.json on this machine. Without the state\n"
+                "this device was in before anything was touched, the survival\n"
+                "check after this batch cannot tell a lost touchscreen from a\n"
+                "normal one, and restore would have nothing to replay.\n"
+                "Run tools/profile.py first." % slug(probe),
+                file=sys.stderr,
+            )
+            return 1
         with open(args.packages) as handle:
             packages = [
                 line.split("#")[0].strip()
@@ -276,7 +327,8 @@ def main(argv=None) -> int:
                 if line.strip() and not line.startswith("#")
             ]
         packages = [p for p in packages if p]
-        return disable(box, probe, packages, assume_yes=args.yes)
+        return disable(box, probe, packages, assume_yes=args.yes,
+                       baseline=baseline)
     except BoxError as exc:
         print("error: %s" % exc, file=sys.stderr)
         return 1

@@ -38,6 +38,13 @@ des boîtiers réellement testés.
 La plupart des dépôts du domaine annoncent une large compatibilité sur la foi
 d'un seul appareil. Celui-ci te dira exactement ce qu'il a vu.
 
+Il a en revanche tourné de bout en bout contre un vrai Android : un émulateur
+jetable dans une VM, voir `tests/emu/`. Cela prouve que le code fonctionne face
+à un `adbd`, un `pm` et un `settings` vivants, et cela a mis au jour cinq bugs
+qu'aucune relecture n'aurait trouvés. Cela ne prouve rien sur un boîtier
+CarPlay : un émulateur n'a ni pile de mirroring, ni firmware constructeur, ni
+voiture.
+
 ## Comment on s'en sert
 
 Tu ne lis pas ce README pour utiliser le toolkit, et tu ne tapes pas ses

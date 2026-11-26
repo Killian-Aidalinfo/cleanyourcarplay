@@ -51,6 +51,8 @@ class NotAndroid(BoxError):
 # Redaction
 # --------------------------------------------------------------------------
 
+_IPV4 = re.compile(r"^(?:\d{1,3}\.){3}\d{1,3}$")
+
 _REDACT = [
     (re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b"), "<ip>"),
     (re.compile(r"\b(?:[0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}\b"), "<mac>"),
@@ -184,9 +186,15 @@ class Box:
     def __init__(self, host: str, port: int = DEFAULT_PORT, use_adb: bool | None = None):
         self.host = host
         self.port = port
-        self.serial = "%s:%d" % (host, port)
+        self.serial = host if port is None else "%s:%d" % (host, port)
         if use_adb is None:
             use_adb = shutil.which("adb") is not None
+        if port is None and not use_adb:
+            raise BoxError(
+                "%s is an ADB serial, not an address, and it can only be "
+                "reached through the adb binary. Install adb, or give the "
+                "device's IP instead." % host
+            )
         self.use_adb = use_adb
         self._tcp = None if use_adb else _TcpAdb(host, port)
         self._props: dict = {}
@@ -284,12 +292,27 @@ class Box:
         """
         if shutil.which("adb") is None:
             return False
+        if ":" not in self.serial:
+            return True          # we are already talking over the cable
+        mine = (self.getprop("ro.serialno")
+                or self.getprop("ro.boot.serialno")).strip()
+        if not mine:
+            # Without an identity we cannot tell this device's cable from
+            # someone else's phone, and guessing yes would promise a way back
+            # that may not exist.
+            return False
         listing = subprocess.run(
             ["adb", "devices"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
         ).stdout.decode("utf-8", "replace")
         for line in listing.splitlines()[1:]:
             parts = line.split()
-            if len(parts) >= 2 and parts[1] == "device" and ":" not in parts[0]:
+            if len(parts) < 2 or parts[1] != "device" or ":" in parts[0]:
+                continue
+            probe = subprocess.run(
+                ["adb", "-s", parts[0], "shell", "getprop", "ro.serialno"],
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            ).stdout.decode("utf-8", "replace").strip()
+            if probe and probe == mine:
                 return True
         return False
 
@@ -374,7 +397,11 @@ def resolve_host(argument: str | None) -> tuple:
     if ":" in host:
         address, _, port = host.partition(":")
         return address, int(port)
-    return host, DEFAULT_PORT
+    if _IPV4.match(host) or "." in host or host in ("localhost",):
+        return host, DEFAULT_PORT
+    # Anything else is an ADB serial: a USB cable, or an emulator transport
+    # such as "emulator-5560". Port None means "this is a serial, not a host".
+    return host, None
 
 
 def main(argv=None) -> int:
