@@ -86,9 +86,17 @@ def survival_check(box: Box, probe: dict) -> dict:
     else:
         checks["accessibility"] = None  # nothing was bound to begin with
 
+    # Ask the interface, not dumpsys: its output is full of "enabled=false"
+    # and similar, so a substring test there can never fail. What matters is
+    # whether the radio still carries an address — that is the lifeline.
     try:
-        wifi = box.shell("dumpsys wifi | head -40")
-        checks["wifi"] = "Wi-Fi is enabled" in wifi or "enabled" in wifi.lower()
+        interface = box.getprop("wifi.interface") or "wlan0"
+        address = box.shell("ip addr show %s 2>/dev/null" % interface)
+        if "inet " in address:
+            checks["wifi"] = True
+        else:
+            state = box.shell("dumpsys wifi | grep -m1 '^Wi-Fi is '").strip()
+            checks["wifi"] = state.endswith("enabled")
     except BoxError:
         checks["wifi"] = False
 
@@ -99,6 +107,9 @@ def survival_check(box: Box, probe: dict) -> dict:
         checks["screencap"] = False
 
     checks["ok"] = all(v for v in checks.values() if v is not None)
+    # Over a Wi-Fi transport the wifi check is tautological: we are talking to
+    # the device through it. It only earns its place on a USB transport.
+    checks["wifi_meaningful"] = box.usb_adb_available()
     return checks
 
 

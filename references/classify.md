@@ -112,7 +112,12 @@ these serve it.
 - File explorers
 - Telemetry, analytics, crash and feedback reporters
 - Live wallpapers, screensavers, easter eggs, demo and retail-mode apps
-- Printing, NFC payment, and other services with no meaning in a car
+- Printing, and other services with no meaning in a car
+
+NFC is deliberately **not** on this list. It is almost certainly useless on
+a CarPlay box, but "almost certainly useless" is not a reason, so it falls
+through to RISKY like any other package whose role has not been established
+on a real device.
 - Factory and engineering menu apps — **disable them, never launch them.**
   `dumpsys package <name>` tells you what you need. Launching a factory menu on
   these devices can write to partitions.

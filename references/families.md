@@ -51,3 +51,9 @@ Send people with a Linux dongle to:
 Linux dongle it exits with status 2, says plainly that the device is out of
 scope and why, and prints the links above. It does not try to be clever, and it
 does not half-support it.
+
+In practice, be aware of how a Linux dongle usually presents itself: it has no
+ADB daemon at all, so the probe fails earlier, at the connection, with "cannot
+reach <host>" rather than with the out-of-scope message. **That failure is
+itself the tell.** The explicit out-of-scope exit is for the rarer case where
+something ADB-shaped answers but is not Android.

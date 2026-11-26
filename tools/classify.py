@@ -56,7 +56,6 @@ SURVIVAL = {
     "com.android.phone",
     "com.android.server.telecom",
     "com.android.bluetooth",
-    "com.android.nfc",
     "com.android.keychain",
     "com.android.permissioncontroller",
     "com.android.packageinstaller",
